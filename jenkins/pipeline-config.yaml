@@ -1,0 +1,4 @@
+pipeline:
+  repo: https://github.com/your/repo
+  branch: main
+  docker_registry: your-registry

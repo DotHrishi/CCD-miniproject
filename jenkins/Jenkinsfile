@@ -1,0 +1,44 @@
+pipeline {
+  agent any
+  environment {
+    REGISTRY = "your-registry"
+    IMAGE_MONO = "${REGISTRY}/monolith"
+    IMAGE_API = "${REGISTRY}/api-service"
+    IMAGE_AUTH = "${REGISTRY}/auth-service"
+    IMAGE_STORAGE = "${REGISTRY}/storage-service"
+  }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+    stage('Build Images') {
+      steps {
+        sh "docker build -t ${IMAGE_MONO}:$BUILD_NUMBER services/monolith"
+        sh "docker build -t ${IMAGE_API}:$BUILD_NUMBER services/api-service"
+        sh "docker build -t ${IMAGE_AUTH}:$BUILD_NUMBER services/auth-service"
+        sh "docker build -t ${IMAGE_STORAGE}:$BUILD_NUMBER services/storage-service"
+      }
+    }
+    stage('Push Images') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+          sh "docker push ${IMAGE_MONO}:$BUILD_NUMBER"
+          sh "docker push ${IMAGE_API}:$BUILD_NUMBER"
+          sh "docker push ${IMAGE_AUTH}:$BUILD_NUMBER"
+          sh "docker push ${IMAGE_STORAGE}:$BUILD_NUMBER"
+        }
+      }
+    }
+    stage('Deploy') {
+      steps {
+        withKubeConfig([credentialsId: 'kubeconfig-cred']) {
+          sh "kubectl apply -f infra/k8s/namespace.yaml || true"
+          sh "kubectl set image deployment/api-service api=${IMAGE_API}:$BUILD_NUMBER -n file-share || kubectl apply -f services/api-service/k8s-deployment.yaml -n file-share"
+          // apply other deployments similarly or use helm
+        }
+      }
+    }
+  }
+  post {
+    failure { mail to: 'you@college.edu', subject: "Build failed", body: "Check Jenkins job" }
+  }
+}

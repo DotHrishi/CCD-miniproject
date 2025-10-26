@@ -1,0 +1,15 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Performance Comparison",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Upload throughput (bytes/sec)",
+        "targets":[ { "expr": "sum(rate(app_upload_bytes_total[1m])) by (service)"} ],
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 }
+      }
+    ]
+  },
+  "overwrite": false
+}

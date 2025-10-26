@@ -1,8 +1,28 @@
+# Python
 __pycache__/
 *.pyc
-*.pyo
-*.db
-*.sqlite3
-venv/
 .env
-.DS_Store
+
+# Docker
+*.log
+*.env
+*.pem
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
+# Kubernetes
+.kube/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local uploads
+services/monolith/uploads/
+services/storage-service/storage/
+
+# Credentials
+jenkins/credentials.txt

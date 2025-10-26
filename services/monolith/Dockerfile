@@ -1,7 +1,10 @@
 FROM python:3.11-slim
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-EXPOSE 5000
-CMD ["python","app.py"]
+RUN mkdir -p /data/uploads
+ENV UPLOAD_DIR=/data/uploads
+ENV SERVICE_NAME=file-monolith
+EXPOSE 8080
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--workers", "2"]

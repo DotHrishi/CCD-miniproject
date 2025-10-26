@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Cloud File Share</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width:700px; margin:2rem auto; }
+    input, button { padding:0.5rem; margin:0.2rem 0; }
+  </style>
+</head>
+<body>
+  <h2>Cloud File Sharing (Demo)</h2>
+  <form id="uploadForm">
+    <input type="file" id="fileInput" />
+    <button type="submit">Upload</button>
+  </form>
+  <div id="result"></div>
+  <h3>Files</h3>
+  <button id="refresh">Refresh List</button>
+  <ul id="files"></ul>
+
+<script>
+const API = location.origin.replace(/:\d+$/,'')+':8080'; // adjust if different
+async function listFiles(){
+  const res = await fetch('/list');
+  if(!res.ok){ return; }
+  const data = await res.json();
+  const ul = document.getElementById('files');
+  ul.innerHTML = '';
+  data.files.forEach(f => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = `/download/${f}`;
+    a.textContent = f;
+    a.download = '';
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+}
+document.getElementById('uploadForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const file = document.getElementById('fileInput').files[0];
+  if(!file) return alert('choose file');
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch('/upload', { method: 'POST', body: fd });
+  const data = await res.json();
+  document.getElementById('result').innerText = JSON.stringify(data);
+  listFiles();
+};
+document.getElementById('refresh').onclick = listFiles;
+listFiles();
+</script>
+</body>
+</html>
