@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  monolith:
+    image: monolith:local
+    build:
+      context: ./services/monolith
+    container_name: monolith
+    volumes:
+      - ./services/monolith/uploads:/data/uploads
+    networks:
+      - file-net
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    networks:
+      - file-net
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    networks:
+      - file-net
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+networks:
+  file-net:
+    driver: bridge
+
+volumes:
+  grafana-storage:
