@@ -8,36 +8,39 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/DotHrishi/CCD-miniproject.git'
+                git branch: 'main', url: 'https://github.com/DotHrishi/CCD-miniproject.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t api-service:latest ./services/api-service'
-                sh 'docker build -t auth-service:latest ./services/auth-service'
-                sh 'docker build -t storage-service:latest ./services/storage-service'
-                sh 'docker build -t frontend:latest ./services/frontend'
+                // Use 'bat' for Windows command line instead of 'sh'
+                bat 'docker build -t api-service:latest ./services/api-service'
+                bat 'docker build -t auth-service:latest ./services/auth-service'
+                bat 'docker build -t storage-service:latest ./services/storage-service'
+                bat 'docker build -t frontend:latest ./services/frontend'
             }
         }
 
         stage('Run Containers') {
             steps {
-                sh 'docker compose -f docker-compose.yml up -d'
+                bat 'docker compose -f docker-compose.yml up -d'
             }
         }
 
         stage('Test Health Checks') {
             steps {
-                sh 'curl -f http://localhost:5001/health || exit 1'
-                sh 'curl -f http://localhost:5002/health || exit 1'
-                sh 'curl -f http://localhost:5003/health || exit 1'
+                bat '''
+                curl -f http://localhost:5001/health || exit /b 1
+                curl -f http://localhost:5002/health || exit /b 1
+                curl -f http://localhost:5003/health || exit /b 1
+                '''
             }
         }
 
         stage('Stop Containers') {
             steps {
-                sh 'docker compose down'
+                bat 'docker compose down'
             }
         }
     }
