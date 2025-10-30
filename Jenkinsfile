@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/<your-username>/file-sharing-system.git'
+                git 'https://github.com/DotHrishi/CCD-miniproject.git'
             }
         }
 
