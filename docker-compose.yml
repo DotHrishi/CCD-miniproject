@@ -11,9 +11,9 @@ services:
     networks:
       - file-net
     ports:
-      - "8080:8080"
+      - "8081:8080"  # shifted from 8080 to 8081 to avoid Jenkins conflict
     environment:
-      # Point to your local Prometheus and Grafana
+      # Pointing to your locally installed Prometheus and Grafana
       - PROMETHEUS_URL=http://host.docker.internal:9090
       - GRAFANA_URL=http://host.docker.internal:3000
 
