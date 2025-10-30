@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>File Sharing System</title>
+</head>
+<body style="font-family: Arial; text-align: center;">
+  <h1>File Sharing System</h1>
+  <form id="uploadForm">
+    <input type="file" name="file" id="fileInput" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <p id="status"></p>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const status = document.getElementById('status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = document.getElementById('fileInput').files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      status.textContent = "Uploading...";
+      try {
+        const res = await fetch('http://localhost:5000/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        status.textContent = res.ok ? `✅ Uploaded! File ID: ${data.file_id}` : `❌ ${data.error}`;
+      } catch (err) {
+        status.textContent = '❌ Upload failed.';
+      }
+    });
+  </script>
+</body>
+</html>

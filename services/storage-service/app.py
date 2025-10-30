@@ -1,75 +1,34 @@
-import os, time
-from flask import Flask, request, send_from_directory, jsonify
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
-import uuid, hashlib
-
-STORAGE_DIR = os.environ.get("STORAGE_DIR", "/data/storage")
-os.makedirs(STORAGE_DIR, exist_ok=True)
-SERVICE = os.environ.get("SERVICE_NAME", "storage-service")
+from flask import Flask, request, jsonify, send_from_directory
+import os, uuid
 
 app = Flask(__name__)
-REQ = Counter('app_requests_total', 'Total HTTP requests', ['service','method','endpoint','http_status'])
-LAT = Histogram('app_request_latency_seconds', 'Request latency', ['service','endpoint'])
-INP = Gauge('app_inprogress_requests', 'In-progress', ['service'])
-BYTES = Counter('app_storage_bytes_total', 'Bytes stored', ['service'])
-FILE_COUNT = Gauge('app_file_count', 'Stored files', ['service'])
+STORAGE_DIR = "/data/storage"
+os.makedirs(STORAGE_DIR, exist_ok=True)
 
-def update_count():
-    try:
-        n = len(os.listdir(STORAGE_DIR))
-    except:
-        n = 0
-    FILE_COUNT.labels(SERVICE).set(n)
+@app.route('/')
+def home():
+    return jsonify({"service": "storage-service", "status": "running"})
 
 @app.route('/store', methods=['POST'])
-def store():
-    start = time.time()
-    INP.labels(SERVICE).inc()
-    try:
-        f = request.files.get('file')
-        if not f:
-            REQ.labels(SERVICE, request.method, '/store', '400').inc()
-            return jsonify({'error':'no file'}), 400
-        fid = str(uuid.uuid4())
-        path = os.path.join(STORAGE_DIR, fid)
-        f.save(path)
-        size = os.path.getsize(path)
-        BYTES.labels(SERVICE).inc(size)
-        # optional: compute hash
-        with open(path,'rb') as fh:
-            hashlib.sha256(fh.read()).hexdigest()
-        update_count()
-        REQ.labels(SERVICE, request.method, '/store', '200').inc()
-        return jsonify({'id': fid}), 200
-    except Exception as e:
-        REQ.labels(SERVICE, request.method, '/store', '500').inc()
-        return jsonify({'error':str(e)}), 500
-    finally:
-        LAT.labels(SERVICE, '/store').observe(time.time()-start)
-        INP.labels(SERVICE).dec()
+def store_file():
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'No file provided'}), 400
 
-@app.route('/fetch/<fid>', methods=['GET'])
-def fetch(fid):
-    start = time.time()
-    INP.labels(SERVICE).inc()
-    try:
-        p = os.path.join(STORAGE_DIR, fid)
-        if not os.path.exists(p):
-            REQ.labels(SERVICE, request.method, '/fetch', '404').inc()
-            return jsonify({'error':'not found'}), 404
-        REQ.labels(SERVICE, request.method, '/fetch', '200').inc()
-        return send_from_directory(STORAGE_DIR, fid, as_attachment=True)
-    finally:
-        LAT.labels(SERVICE, '/fetch').observe(time.time()-start)
-        INP.labels(SERVICE).dec()
+    fid = str(uuid.uuid4())
+    filename = f"{fid}_{f.filename}"
+    save_path = os.path.join(STORAGE_DIR, filename)
+    f.save(save_path)
 
-@app.route('/metrics')
-def metrics():
-    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+    return jsonify({'message': 'File stored', 'file_id': filename}), 200
 
-@app.route('/health')
-def health():
-    return jsonify({'ok':True}), 200
+@app.route('/retrieve/<fid>', methods=['GET'])
+def retrieve(fid):
+    # Find matching file
+    for fname in os.listdir(STORAGE_DIR):
+        if fname.startswith(fid):
+            return send_from_directory(STORAGE_DIR, fname, as_attachment=True)
+    return jsonify({'error': 'File not found'}), 404
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5002)))
+    app.run(host='0.0.0.0', port=5002)

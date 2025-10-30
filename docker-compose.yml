@@ -1,21 +1,51 @@
 version: '3.8'
 
 services:
-  monolith:
-    image: monolith:local
+  frontend:
+    image: frontend:local
     build:
-      context: ./services/monolith
-    container_name: monolith
-    volumes:
-      - ./services/monolith/uploads:/data/uploads
+      context: ./services/frontend
+    container_name: frontend
+    ports:
+      - "8081:80"
     networks:
       - file-net
+
+  api-service:
+    image: api-service:local
+    build:
+      context: ./services/api-service
+    container_name: api-service
     ports:
-      - "8081:8080"  # shifted from 8080 to 8081 to avoid Jenkins conflict
+      - "5000:5000"
     environment:
-      # Pointing to your locally installed Prometheus and Grafana
-      - PROMETHEUS_URL=http://host.docker.internal:9090
-      - GRAFANA_URL=http://host.docker.internal:3000
+      - STORAGE_URL=http://storage-service:5002
+      - AUTH_URL=http://auth-service:5001
+      - SERVICE_NAME=api-service
+    networks:
+      - file-net
+
+  auth-service:
+    image: auth-service:local
+    build:
+      context: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    networks:
+      - file-net
+
+  storage-service:
+    image: storage-service:local
+    build:
+      context: ./services/storage-service
+    container_name: storage-service
+    volumes:
+      - ./services/storage-service/storage:/data/storage
+    ports:
+      - "5002:5002"
+    networks:
+      - file-net
 
 networks:
   file-net:
