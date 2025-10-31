@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     image: frontend:local
@@ -46,6 +44,26 @@ services:
       - "5002:5002"
     networks:
       - file-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - file-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3030:3000"   # ✅ changed host port to 3030
+    networks:
+      - file-net
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
 
 networks:
   file-net:

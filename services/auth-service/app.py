@@ -1,53 +1,40 @@
-import os, time
 from flask import Flask, request, jsonify
+import os, time
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 app = Flask(__name__)
 SERVICE = os.environ.get("SERVICE_NAME", "auth-service")
-
-REQ = Counter('app_requests_total', 'Total HTTP requests', ['service','method','endpoint','http_status'])
-LAT = Histogram('app_request_latency_seconds', 'Request latency', ['service','endpoint'])
-INP = Gauge('app_inprogress_requests', 'In-progress', ['service'])
-
-# very simple: token is "Bearer secret-token"
 VALID_TOKEN = os.environ.get("VALID_TOKEN", "Bearer secret-token")
+
+# --- Unified metrics ---
+REQUEST_COUNT = Counter('app_requests_total', 'Total HTTP requests', ['service','method','endpoint','http_status'])
+REQUEST_LATENCY = Histogram('app_request_latency_seconds', 'Request latency (s)', ['service','endpoint'])
+IN_PROGRESS = Gauge('app_inprogress_requests', 'In-progress requests', ['service'])
+
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+    IN_PROGRESS.labels(SERVICE).inc()
+
+@app.after_request
+def after_request(response):
+    REQUEST_COUNT.labels(SERVICE, request.method, request.path, response.status_code).inc()
+    REQUEST_LATENCY.labels(SERVICE, request.path).observe(time.time() - request.start_time)
+    IN_PROGRESS.labels(SERVICE).dec()
+    return response
 
 @app.route('/login', methods=['POST'])
 def login():
-    start = time.time()
-    INP.labels(SERVICE).inc()
-    try:
-        data = request.json or {}
-        # for demo allow any username/password => return token
-        token = VALID_TOKEN
-        REQ.labels(SERVICE, request.method, '/login', '200').inc()
-        return jsonify({'token': token}), 200
-    finally:
-        LAT.labels(SERVICE, '/login').observe(time.time()-start)
-        INP.labels(SERVICE).dec()
+    return jsonify({'token': VALID_TOKEN}), 200
 
 @app.route('/validate', methods=['POST'])
 def validate():
-    start = time.time()
-    INP.labels(SERVICE).inc()
-    try:
-        token = request.headers.get('Authorization','')
-        if token == VALID_TOKEN:
-            REQ.labels(SERVICE, request.method, '/validate', '200').inc()
-            return jsonify({'valid':True}), 200
-        REQ.labels(SERVICE, request.method, '/validate', '401').inc()
-        return jsonify({'valid':False}), 401
-    finally:
-        LAT.labels(SERVICE, '/validate').observe(time.time()-start)
-        INP.labels(SERVICE).dec()
+    token = request.headers.get('Authorization','')
+    return jsonify({'valid': token == VALID_TOKEN}), (200 if token == VALID_TOKEN else 401)
 
 @app.route('/metrics')
 def metrics():
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
-@app.route('/health')
-def health():
-    return jsonify({'ok':True}), 200
-
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5001)))
+    app.run(host='0.0.0.0', port=5001)
