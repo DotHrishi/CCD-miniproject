@@ -22,6 +22,14 @@ pipeline {
             }
         }
 
+        stage('Rebuild Without Cache') {
+            steps {
+        bat 'docker compose -f docker-compose.yml down || exit 0'
+        bat 'docker compose -f docker-compose.yml build --no-cache'
+            }
+        }
+
+
         stage('Run Containers') {
             steps {
                 bat 'docker compose -f docker-compose.yml up -d'
