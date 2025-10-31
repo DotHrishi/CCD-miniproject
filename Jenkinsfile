@@ -41,7 +41,7 @@ pipeline {
                 bat '''
                 curl -f http://localhost:5001/health || exit /b 1
                 curl -f http://localhost:5002/health || exit /b 1
-                curl -f http://localhost:5003/health || exit /b 1
+                curl -f http://localhost:5000/health || exit /b 1
                 '''
             }
         }
