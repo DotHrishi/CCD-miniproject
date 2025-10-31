@@ -5,8 +5,7 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 app = Flask(__name__)
 STORAGE_DIR = "/data/storage"
 os.makedirs(STORAGE_DIR, exist_ok=True)
-
-SERVICE = "storage-service"
+SERVICE = os.getenv("SERVICE_NAME", "storage-service")
 
 # --- Unified Prometheus metrics ---
 REQUEST_COUNT = Counter('app_requests_total', 'Total HTTP requests', ['service', 'method', 'endpoint', 'http_status'])
@@ -61,6 +60,10 @@ def retrieve(fid):
 def metrics():
     update_file_count()
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
+@app.route('/health')
+def health():
+    return jsonify({'status': 'healthy', 'service': SERVICE}), 200
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002)
