@@ -36,5 +36,9 @@ def validate():
 def metrics():
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
+@app.route('/health')
+def health():
+    return jsonify({'status': 'healthy', 'service': SERVICE}), 200
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001)
